@@ -1,0 +1,19 @@
+
+
+x = 5
+u_matrix = normrnd(0,1,100,12)
+
+
+%% 
+
+
+function simdata = var_sim(R, T, p, nu, rho1, rho2, sigma2)
+    simdata = zeros(R,T+2)
+    u_matrix = normrnd(0,sigma2,R,T+2)
+    for r = 1:R
+        for t = 1:T
+            simdata(r,t) = 
+        end
+    end
+
+end
