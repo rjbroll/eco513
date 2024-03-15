@@ -1,0 +1,93 @@
+
+
+%% Q2
+
+% Load data
+    % UNRATE - take quarterly averages
+unrate = table2timetable(readtable('UNRATE.csv'));
+unrate = retime(unrate, 'quarterly','mean');
+
+    % GDPDEF - take annualized log growth rates
+deflator = table2timetable(readtable('GDPDEF.csv'));
+deflator = synchronize(deflator, lag(deflator));
+deflator.growth = 4*log(deflator.GDPDEF_deflator ./ deflator.GDPDEF_2);
+deflator = deflator(:,'growth');
+
+    % Combine
+table = innerjoin(deflator, unrate);
+
+    % Select sample
+sample = timerange('-inf', '2020-01-01');
+table = table(sample,:);
+
+    % Turn into data matrix (instead of timetable)
+data = table{:,["growth" "UNRATE"]};
+
+% (i) Estimate betahat by GMM
+    % Set effective sample size
+effT = size(data,1) - 3 - 1; % extra -1 because of the x_{t+1}
+
+    % Create effT x 7 matrix of instruments Z
+Z_1 = lagmatrix(data(:,1),1:3);
+Z_2 = lagmatrix(data(:,2),1:3);
+Z = [ones(effT,1) Z_1(4:end-1,:) Z_2(4:end-1,:)]; 
+
+    % Create effT x 4 matrix of "regressors" X
+X = lagmatrix(data(:,1),[-1 1]);
+X = [ones(effT,1) X(4:end-1,:) data(4:end-1,2)];
+
+    % Create effT x 1 vector y
+y = data(4:end-1,1);
+
+    % Estimate betahat with GMM (W = inv(Z'Z) equivalent to 2SLS)
+fitX = Z*(Z\X); % fitted values from regression of X on Z
+fity = Z*(Z\y); % fitted values from regression of y on Z
+betahat = fitX\fity; % GMM = 2SLS 
+
+% (ii) Two-step efficient GMM
+    % Create effT x 7 matrix M of GMM moment observations
+M = (y-X*betahat).*Z;
+
+    % Estimate the LRV Omegahat of the time series process M by VAR-HAC
+        % Choose p using BIC
+[~,~,bic_p] = estimate_ic(M,1:50);
+
+        % Estimate VAR(bic_p) on M
+[A,Sigmahat] = estimate_var(M,bic_p);
+
+        % Construct Omegahat
+A = A(:,2:end); % keep only "slope" coefficient estimates 
+I = repmat(eye(7),bic_p,1);
+sumA = A * I;
+Omegahat = ((eye(7)-sumA)\Sigmahat)/((eye(7)-sumA)');
+
+    % Estimate betahat with GMM efficient (W = inv(Omegahat))
+betahat_eff = (((X'*Z)/Omegahat)*(Z'*X))\(((X'*Z)/Omegahat)*(Z'*y));
+
+% (iii) Standard errors for (i) and (ii)
+    % Estimate 7x4 matrix Ghat, the derivative of moments wrt parameters
+Ghat = -(Z'*X)/effT;
+
+    % Standard errors for (i): Avar1 = inv(G'WG)*G'WOmegaWG*inv(G'WG),
+    % W=inv(Z'Z)
+outer = ((Ghat')/(Z'*Z))*Ghat;
+inner = ((Ghat')/(Z'*Z)) * Omegahat * ((Z'*Z)\Ghat);
+AVar1 = (outer\(inner))/outer;
+se1 = sqrt(diag(AVar1)/effT);
+
+    % Standard errors for (ii): Avar2 = inv(G'inv(Omega)G)
+AVar2 = inv((Ghat'/Omegahat)*Ghat);
+se2 = sqrt(diag(AVar2)/effT);
+
+% (iv) 
+
+
+
+
+
+
+
+
+
+
+
