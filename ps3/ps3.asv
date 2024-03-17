@@ -101,10 +101,36 @@ Psihat = kron(inv(Sx), Sigmahat_q3);
 Psihat = Psihat(3:end,3:end); % just variance of slope coefficients
 
     % Conduct CMD with efficient weight matrix W = inv(Psihat)
-Ahat_q3 = (Ahat_q3(:,2:end)');
+Ahat_q3 = (Ahat_q3(:,2:end));
 Ahat_q3 = Ahat_q3(:); % Ahat_q3 = [A11 A12 A21 A22]'
 objfun = @(theta) (((Ahat_q3 - h(theta))')/Psihat) * (Ahat_q3 - h(theta));
-[thetahat, opval] = fminunc(objfun,ones(4,1));
+[thetahat, opval] = fminunc(objfun, [.56,-.01,.76,-.01]');
+
+% (iii) Calculate standard errors
+    % Calculate D
+D = zeros(4);
+
+theta_1p = thetahat + [abs(thetahat(1))/100 0 0 0]';
+theta_1m = thetahat - [abs(thetahat(1))/100 0 0 0]';
+D(:,1) = (h(theta_1p) - h(theta_1m))/(abs(thetahat(1))/50);
+
+theta_2p = thetahat + [0 abs(thetahat(2))/100 0 0]';
+theta_2m = thetahat - [0 abs(thetahat(2))/100 0 0]';
+D(:,2) = (h(theta_2p) - h(theta_2m))/(abs(thetahat(2))/50);
+
+theta_3p = thetahat + [0 0 abs(thetahat(3))/100 0]';
+theta_3m = thetahat - [0 0 abs(thetahat(3))/100 0]';
+D(:,3) = (h(theta_3p) - h(theta_3m))/(abs(thetahat(3))/50);
+
+theta_4p = thetahat + [0 0 0 abs(thetahat(4))/100]';
+theta_4m = thetahat - [0 0 0 abs(thetahat(4))/100]';
+D(:,4) = (h(theta_4p) - h(theta_4m))/(abs(thetahat(4))/50);
+
+    % Calculate standard errors
+AVar_q3 = inv((D'/Psihat)*D);
+se_q3 = sqrt(diag(AVar_q3)/effT_q3);
+
+
 
 
 
