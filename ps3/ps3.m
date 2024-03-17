@@ -90,9 +90,23 @@ pvalue = 1 - chi2cdf(Jstat,3); % dof = r-k = 7-4 = 3
 
 %% Q3
 
+% (ii) Estimate theta by minimum distance
+    % run a VAR(1) on (x_t, pi_t)'
+[Ahat_q3, Sigmahat_q3, ~, X_q3] = estimate_var(fliplr(data),1);
 
+    % Construct Psihat, the asymptotic variance of Ahat_q3
+effT_q3 = size(data,1) - 1;
+Sx = (X_q3'*X_q3)/effT_q3;
+Psihat = kron(inv(Sx), Sigmahat_q3);
+Psihat = Psihat(3:end,3:end); % just variance of slope coefficients
 
-  
+    % Conduct CMD with efficient weight matrix W = inv(Psihat)
+Ahat_q3 = (Ahat_q3(:,2:end));
+Ahat_q3 = Ahat_q3(:); % Ahat_q3 = [A11 A12 A21 A22]'
+objfun = @(theta) (((Ahat_q3 - h(theta))')/Psihat) * (Ahat_q3 - h(theta));
+[thetahat, opval] = fminunc(objfun,ones(4,1));
+
+% (iii) 
 
 
 
