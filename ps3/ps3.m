@@ -130,6 +130,58 @@ D(:,4) = (h(theta_4p) - h(theta_4m))/(abs(thetahat(4))/50);
 AVar_q3 = inv((D'/Psihat)*D);
 se_q3 = sqrt(diag(AVar_q3)/effT_q3);
 
+%% Q4
+
+% (i) Bootstrap Granger causality test
+
+    % Load Data (Mikkel's code from PS1)
+dat_monthly = table2timetable(readtable('q4_monthly.txt'));
+dat_quarterly = table2timetable(readtable('q4_quarterly.txt'));
+dat = innerjoin(retime(dat_monthly,'quarterly','mean'), dat_quarterly);
+
+rgdp_growth = 4*log(dat{2:end,'GDPC1'}./dat{1:end-1,'GDPC1'}); % RGDP log growth, annualized
+pgdp_growth = 4*log(dat{2:end,'GDPDEF'}./dat{1:end-1,'GDPDEF'}); % PGDP log growth, annualized
+fedfunds_real = 0.01*dat{2:end,'FEDFUNDS'}-pgdp_growth; % Fed Funds Rate minus inflation
+
+% Keep relevant sample
+time = datetime(dat.Properties.RowTimes(2:end));
+sample = (time >= datetime('1954-07-01')) & (time <= datetime('2019-12-31'));
+time = time(sample);
+rgdp_growth = rgdp_growth(sample);
+pgdp_growth = pgdp_growth(sample);
+fedfunds_real = fedfunds_real(sample);
+
+q4_data = [rgdp_growth pgdp_growth fedfunds_real]; % VAR variables;
+T_q4 = size(q4_data,1);
+
+    % Estimate VAR(4)
+[betahat_q4, Sigmahat_q4, resids_q4] = estimate_var(q4_data,4);
+
+    % Create varm MATLAB object for filtering
+AR_q4 = {betahat_q4(:,2:4); betahat_q4(:,5:7); betahat_q4(:,8:10); betahat_q4(:,11:13)};
+Mdl = varm('Lags',1:4,'Constant',betahat_q4(:,1),'AR',AR_q4,'Covariance',Sigmahat_q4);
+
+    % Calculate Wald statistic for test 
+inds_wald = 3*(1:4)';
+stat_wald = var_waldstat(q4_data,4,1,inds_wald);
+
+    % Run recursive residual bootstrap to get sampling dist. of stat_wald
+B = 5000;
+waldstat_boot = zeros(B,1);
+
+for b=1:B
+        % Sample residuals i.i.d. with replacement
+    residstar = resids_q4(ceil(rand(T_q4-4,1)*(T_q4-4)),:);
+        % Generate Ystar
+    Ystar = filter(Mdl,residstar,Y0=q4_data(1:4,:));
+    Ystar = [q4_data(1:4,:); Ystar]; % set Y_t^* = Y_t for t=1:4
+        % Calculate Wald statistic
+    waldstat_boot(b) = var_waldstat(Ystar,4,1,inds_wald);
+end
+
+    % Calculate p-value
+pvalue = sum(waldstat_boot > stat_wald)/B;
+
 
 
 
