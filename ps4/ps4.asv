@@ -220,11 +220,11 @@ Psihat5 = zeros(n,n,hor+1); % Also a 3D array
 Psihat5(:,:,1) = eye(n); % Psihat_0 = I_n
 
 for l = 1:p % Calculate first p reduced form impulse responses
-    Psihat5(:,:,l+1) = sum(pagemtimes(Ahat5_3d(:,:,1:l),Psihat5(:,:,l:-1:1)),3);
+    Psihat5(:,:,l+1) = sum(pagemtimes(Ahat5_3d(:,:,1:l),Psihat3iii(:,:,l:-1:1)),3);
 end
 
 for l = p+1:hor % Calculate the rest
-    Psihat5(:,:,l+1) = sum(pagemtimes(Ahat5_3d, Psihat5(:,:,l:-1:l-(p-1))),3);
+    Psihat3iii(:,:,l+1) = sum(pagemtimes(Ahat3d_3iii, Psihat3iii(:,:,l:-1:l-3)),3);
 end
 
 
