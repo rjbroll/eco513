@@ -164,6 +164,9 @@ R=eye(n*k);
 R = R([7:10 32:35 57:60 82:85],:);
 Wald_stat = (R*Ahat3iii(:))' * ( (R*Omegahat3iii*R') \ (R*Ahat3iii(:)) );
 p_value = 1-chi2cdf(Wald_stat,r);
+disp('***** Q3 part v *****');
+disp('p-value =');
+disp(p_value);
 
 %%
 % (iv) LP-IV: 2SLS implementation
