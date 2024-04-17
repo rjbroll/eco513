@@ -1,0 +1,86 @@
+%% ECO 513: Problem Set 5
+
+%% Question 2(b)
+
+% Read-in data
+q1table = readtable('eco513_ps5_data.csv');
+y = q1table{:,["Delta_y" "Delta_u"]};
+
+% Cast into state space using MLE estimates
+c = 0;
+H = [1 -.21]';
+F = .82;
+Q = .08;
+R = [.28 0; 0 .02];
+S_1_0 = 0;
+P_1_0 = Q/(1 - F^2);
+
+% Run Kalman Filter (Mikkel's code)
+[ll, S_filter, P_filter, S_forec, P_forec] = kalman_filter(y,c,H,F,Q,R,S_1_0,P_1_0);
+
+% Run Kalman Smoother (Mikkel's code)
+[S_smooth, P_smooth] = kalman_smoother(F,S_filter,P_filter,S_forec,P_forec);
+
+% Plot Slide 16 (data vs. smoothed state)
+q1table.S_smooth = S_smooth; 
+p1 = plot(q1table.date, q1table.Delta_y, "r--", q1table.date, q1table.S_smooth, "k");
+p1(2).LineWidth=2;
+legend(p1,"IP growth","Smoothed state");
+title("Data and smoothed state");
+
+% Plot Slide 17 (smoothed vs. filtered state)
+q1table.S_filter = S_filter;
+p2 = plot(q1table.date, q1table.S_filter, "r--", q1table.date, q1table.S_smooth, "k");
+p2(2).LineWidth=2;
+legend(p2,"Filtered state", "Smoothed state");
+title("Smoothed and filtered state");
+
+% Generate CI for slide 18
+T = size(y,1);
+state_CI = zeros(T,2);
+for t=1:T
+    state_CI(t,:) = norminv([.025 .975],S_smooth(t),sqrt(P_smooth(1,1,t)));
+end
+
+% Plot Slide 18 (95% uncertainty band for state)
+p3 = plot(q1table.date,state_CI(:,1),"k", q1table.date, state_CI(:,2),"k");
+title("95% uncertainty band for smoothed state")
+
+%% Question 2(a)
+
+
+
+%% Question 4
+q4table = readtable('RNUSBIS.csv');
+q4table.logrer = log(q4table.RNUSBIS);
+y = q4table{:,'logrer'};
+lagy = lagmatrix(y,1);
+deltay = y - lagy;
+
+% Select lag order by BIC
+[~,~,bic_selectedp] = estimate_ic(deltay(2:end),0:50);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
